@@ -14,5 +14,5 @@ type Transaction struct {
 	Transfer_Status      bool               `json:"transfer_status"`
 	Created_at           time.Time          `json:"created_at"`
 	Updated_at           time.Time          `json:"updated_at"`
-	Transaction_ID       string             `json:"transaction_id"`
+	Transaction_id       string             `json:"transaction_id"`
 }

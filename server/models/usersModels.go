@@ -14,12 +14,14 @@ type User struct {
 	Email          *string            `json:"email" validate:"required"`
 	Image          *string            `json:"image"`
 	Phone          *string            `json:"phone" validate:"required"`
+	Address        *string            `json:"address"`
+	BVN            *string            `json:"bvn"`
+	Account_Number *string            `json:"account_number"`
 	Token          *string            `json:"token"`
 	Refresh_Token  *string            `json:"refresh_token"`
 	Created_at     time.Time          `json:"created_at"`
 	Updated_at     time.Time          `json:"updated_at"`
 	User_id        string             `json:"user_id"`
-	Account_Number *string            `json:"account_number"`
 	Card           Card               `json:"card"`
 	Account        Account            `json:"account"`
 }
