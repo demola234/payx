@@ -17,6 +17,9 @@ func main() {
 	router.Use(gin.Logger())
 	// router.Use(middleware.Authentication())
 	routers.UserRoutes(router)
-
+	// my part 
+	// get all users
+	// get one
+	// deposit
 	router.Run(":" + port)
 }
