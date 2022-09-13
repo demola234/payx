@@ -17,11 +17,12 @@ type User struct {
 	Address        *string            `json:"address"`
 	BVN            *string            `json:"bvn"`
 	Account_Number *string            `json:"account_number"`
+	Balance        *uint               `json:"balance"`
 	Token          *string            `json:"token"`
 	Refresh_Token  *string            `json:"refresh_token"`
 	Created_at     time.Time          `json:"created_at"`
 	Updated_at     time.Time          `json:"updated_at"`
 	User_id        string             `json:"user_id"`
-	Card           Card               `json:"card"`
-	Account        Account            `json:"account"`
+	Card_id        *string            `json:"card"`
+	Account_id     *string            `json:"account"`
 }
