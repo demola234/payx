@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"go-service/payx/database"
 	"go-service/payx/helpers"
 	"go-service/payx/models"
@@ -27,12 +26,12 @@ func GetUsers() gin.HandlerFunc {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 
 		recordPerPage, err := strconv.Atoi(c.Query("recordPerPage"))
-		if err != nil || recordPerPage <1{
+		if err != nil || recordPerPage < 1 {
 			recordPerPage = 10
 		}
 
 		page, err1 := strconv.Atoi(c.Query("page"))
-		if err1 != nil || page < 1{
+		if err1 != nil || page < 1 {
 			page = 1
 		}
 
@@ -45,17 +44,16 @@ func GetUsers() gin.HandlerFunc {
 				{"_id", 0},
 				{"total_count", 1},
 				{"user_items", bson.D{{"$slice", []interface{}{"$data", startIndex, recordPerPage}}}},
-			
-		}}}
+			}}}
 
 		result, err := userCollection.Aggregate(ctx, mongo.Pipeline{matchStage, projectStage})
 		defer cancel()
-		if err != nil{
+		if err != nil {
 			c.JSON(500, gin.H{"status": "Failure",
-								"message": "An error occured while listing user items"})
+				"message": "An error occured while listing user items"})
 		}
 		var allUsers []bson.M
-		if err = result.All(ctx, &allUsers); err != nil{
+		if err = result.All(ctx, &allUsers); err != nil {
 			log.Fatal(err)
 		}
 		c.JSON(200, gin.H{"status": "Success", "data": allUsers})
@@ -195,7 +193,7 @@ func VerifyPassword(userPassword string, providedPassword string) (string, bool)
 	msg := ""
 
 	if err != nil {
-		msg = fmt.Sprintf("login or password is incorrect")
+		msg = "login or password is incorrect"
 		check = false
 	}
 	return msg, check
