@@ -1,4 +1,4 @@
-module go-service/payx/server
+module go-service/payx
 
 go 1.18
 

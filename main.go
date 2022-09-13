@@ -1,7 +1,7 @@
 package main
 
 import (
-	routers "go-service/payx/server/routes"
+	routers "go-service/payx/routes"
 	"os"
 
 	"github.com/gin-gonic/gin"

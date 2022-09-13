@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"go-service/payx/server/controllers"
+	"go-service/payx/controllers"
 
 	"github.com/gin-gonic/gin"
 )
