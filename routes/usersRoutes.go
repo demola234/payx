@@ -1,15 +1,16 @@
 package routes
 
 import (
-	"go-service/payx/controllers"
+	// "go-service/payx/controllers"
 
 	"github.com/gin-gonic/gin"
 )
 
 func UserRoutes(incomingRoutes *gin.Engine) {
-	incomingRoutes.GET("/users", controllers.GetUsers())
-	incomingRoutes.GET("/users/:user_id", controllers.GetUser())
-	incomingRoutes.GET("/users/:user_id", controllers.EditUser())
-	incomingRoutes.POST("/users/signup", controllers.SignUp())
-	incomingRoutes.POST("/users/login", controllers.Login())
+	// incomingRoutes.GET("/users", controllers.GetUsers())
+	// incomingRoutes.GET("/users/:user_id", controllers.GetUser())
+	// incomingRoutes.GET("/users/:user_id", controllers.EditUser())
+	// incomingRoutes.POST("/users/signup", controllers.SignUp())
+	// incomingRoutes.POST("/users/login", controllers.Login())
+	// incomingRoutes.POST("/users/profile", controllers.UploadProfileImage())
 }

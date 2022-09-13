@@ -1,10 +1,14 @@
 package controllers
 
-import "github.com/gin-gonic/gin"
+import (
+	"fmt"
+
+	"github.com/gin-gonic/gin"
+)
 
 func GetUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		
+
 	}
 }
 
@@ -19,13 +23,24 @@ func EditUser() gin.HandlerFunc {
 }
 
 func SignUp() gin.HandlerFunc {
-	return func(c *gin.Context) {}
+	return func(c *gin.Context) {
+
+	}
 }
 
 func Login() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var v = CreateAccountDetails()
+		fmt.Sprintln(v)
+	}
+}
+
+func UploadProfileImage() gin.HandlerFunc {
 	return func(c *gin.Context) {}
 }
 
 func HashPassword() {}
 
-func VerifyPassword() {}
+func VerifyPassword() {
+
+}
