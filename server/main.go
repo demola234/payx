@@ -1,7 +1,7 @@
 package main
 
 import (
-	"go-service/payx/server/routes"
+	routers "go-service/payx/server/routes"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -10,10 +10,13 @@ import (
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8000"
+		port = "3000"
 	}
 
 	router := gin.New()
 	router.Use(gin.Logger())
-	routes.UserRoutes(router)
+	// router.Use(middleware.Authentication())
+	routers.UserRoutes(router)
+
+	router.Run(":" + port)
 }
