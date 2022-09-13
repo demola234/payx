@@ -7,6 +7,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+
 func MongoDBEnvUrl() string {
 	err := godotenv.Load()
 	if err != nil {
@@ -14,3 +15,4 @@ func MongoDBEnvUrl() string {
 	}
 	return os.Getenv("mongodb://localhost:27017")
 }
+
