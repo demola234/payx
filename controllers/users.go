@@ -10,9 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"log"
 	"time"
+	"net/http"
 	"go-service/payx/helpers"
 	"go-service/payx/models"
-	"log"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
@@ -39,6 +39,7 @@ func GetUsers() gin.HandlerFunc {
 		startIndex, err = strconv.Atoi(c.Query("startIndex"))
 
 		matchStage := bson.D{{"$match", bson.D{{}}}}
+		groupStage := bson.D{{"$group", bson.D{{"_id", bson.D{{"_id", "null"}}}, {"total_count", bson.D{{"$sum", 1}}}, {"data", bson.D{{"$push", "$$ROOT"}}}}}}
 		projectStage := bson.D{
 			{"$project", bson.D{
 				{"_id", 0},
@@ -47,7 +48,7 @@ func GetUsers() gin.HandlerFunc {
 			
 		}}}
 
-		result, err := userCollection.Aggregate(ctx, mongo.Pipeline{matchStage, projectStage})
+		result, err := userCollection.Aggregate(ctx, mongo.Pipeline{matchStage, groupStage, projectStage})
 		defer cancel()
 		if err != nil{
 			c.JSON(500, gin.H{"status": "Failure",
@@ -57,7 +58,7 @@ func GetUsers() gin.HandlerFunc {
 		if err = result.All(ctx, &allUsers); err != nil{
 			log.Fatal(err)
 		}
-		c.JSON(200, gin.H{"status": "Success", "data": allUsers})
+		c.JSON(200, allUsers[0])
 	}
 }
 
