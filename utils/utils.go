@@ -18,7 +18,7 @@ func GenerateRandomString(length int, condition int ) (string){
 	if(condition == 2){
 		letters = []rune("0123456789")
 		}
-	if(condition == 1){
+	if(condition == 3){
 		letters = []rune("abcdefghijklmnopqrstuvwxyz")
 		}
 		b := make([]rune, length)
