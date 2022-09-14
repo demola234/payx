@@ -8,6 +8,8 @@ import (
 
 func UserRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/users", controllers.GetUsers())
+	incomingRoutes.GET("/account/:account_id", controllers.GetUserAccountDetails())
+	incomingRoutes.GET("/card/:card_id", controllers.GetUserCardDetails())
 	// incomingRoutes.GET("/users/:user_id", controllers.GetUser())
 	// incomingRoutes.GET("/users/:user_id", controllers.EditUser())
 	incomingRoutes.POST("/users/signup", controllers.SignUp())
