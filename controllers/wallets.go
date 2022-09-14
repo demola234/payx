@@ -15,6 +15,7 @@ import (
 )
 
 var accountCollection *mongo.Collection = database.PayxCollection(database.Client, "Account")
+var cardCollection *mongo.Collection = database.PayxCollection(database.Client, "Card")
 
 func CreateAccountDetails(c *gin.Context) (models.Account, error) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
@@ -42,7 +43,7 @@ func CreateAccountDetails(c *gin.Context) (models.Account, error) {
 	accountNumber := utils.GenerateRandomString(10, 2)
 	account.Account_Number = accountNumber
 
-	_, error = userCollection.InsertOne(ctx, account)
+	_, error = accountCollection.InsertOne(ctx, account)
 	return account, error
 }
 
@@ -71,6 +72,6 @@ func CreateUsersCard(c *gin.Context) (models.Card, error) {
 	cardNumber := utils.GenerateRandomString(16, 2)
 	card.Card_Number = cardNumber
 
-	_, error = userCollection.InsertOne(ctx, card)
+	_, error = cardCollection.InsertOne(ctx, card)
 	return card, error
 }

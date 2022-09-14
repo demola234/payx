@@ -24,7 +24,7 @@ var userCollection *mongo.Collection = database.PayxCollection(database.Client, 
 func GetUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-
+		var users models.User
 		recordPerPage, err := strconv.Atoi(c.Query("recordPerPage"))
 		if err != nil || recordPerPage < 1 {
 			recordPerPage = 10
@@ -39,14 +39,16 @@ func GetUsers() gin.HandlerFunc {
 		startIndex, err = strconv.Atoi(c.Query("startIndex"))
 
 		matchStage := bson.D{{"$match", bson.D{{}}}}
+		groupStage := bson.D{{"$group", bson.D{{"_id", bson.D{{"_id", users.User_id}}}, {"total_count", bson.D{{"$sum", 1}}}, {"data", bson.D{{"$push", "$$ROOT"}}}}}}
 		projectStage := bson.D{
 			{"$project", bson.D{
 				{"_id", 0},
 				{"total_count", 1},
 				{"user_items", bson.D{{"$slice", []interface{}{"$data", startIndex, recordPerPage}}}},
 			}}}
+		unStage := bson.D{{"$unset", "password"}}
 
-		result, err := userCollection.Aggregate(ctx, mongo.Pipeline{matchStage, projectStage})
+		result, err := userCollection.Aggregate(ctx, mongo.Pipeline{matchStage, unStage, groupStage, projectStage})
 		defer cancel()
 		if err != nil {
 			c.JSON(500, gin.H{"status": "Failure",
@@ -56,7 +58,7 @@ func GetUsers() gin.HandlerFunc {
 		if err = result.All(ctx, &allUsers); err != nil {
 			log.Fatal(err)
 		}
-		c.JSON(200, gin.H{"status": "Success", "data": allUsers})
+		c.JSON(200, gin.H{"status": "Success", "data": allUsers[0]})
 	}
 }
 
@@ -197,4 +199,29 @@ func VerifyPassword(userPassword string, providedPassword string) (string, bool)
 		check = false
 	}
 	return msg, check
+}
+
+func DeleteUser() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+		userId := c.Param("user_id")
+		defer cancel()
+
+		filter := bson.M{"user_id": userId}
+		result, err := userCollection.DeleteOne(ctx, filter)
+		res := map[string]interface{}{"data": result}
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": err})
+			return
+		}
+
+		if result.DeletedCount < 1 {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "No data to delete"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"message": "Table deleted successfully", "Data": res})
+	}
 }

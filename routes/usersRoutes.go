@@ -11,6 +11,7 @@ func UserRoutes(incomingRoutes *gin.Engine) {
 	// incomingRoutes.GET("/users/:user_id", controllers.GetUser())
 	// incomingRoutes.GET("/users/:user_id", controllers.EditUser())
 	incomingRoutes.POST("/users/signup", controllers.SignUp())
+	incomingRoutes.DELETE("/users/:user_id", controllers.DeleteUser())
 	// incomingRoutes.POST("/users/login", controllers.Login())
 	// incomingRoutes.POST("/users/profile", controllers.UploadProfileImage())
 }
