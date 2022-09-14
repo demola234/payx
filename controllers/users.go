@@ -2,19 +2,24 @@ package controllers
 
 import (
 	"context"
-	"fmt"
-	"strconv"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 	"go-service/payx/database"
+
 	"github.com/gin-gonic/gin"
-	"log"
 	"time"
-	"net/http"
 	"go-service/payx/helpers"
 	"go-service/payx/models"
+
+	"log"
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/gin-gonic/gin"
+
 	"github.com/go-playground/validator/v10"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -24,13 +29,15 @@ var userCollection *mongo.Collection = database.PayxCollection(database.Client, 
 func GetUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+
+		var users models.User
 		recordPerPage, err := strconv.Atoi(c.Query("recordPerPage"))
-		if err != nil || recordPerPage <1{
+		if err != nil || recordPerPage < 1 {
 			recordPerPage = 10
 		}
 
 		page, err1 := strconv.Atoi(c.Query("page"))
-		if err1 != nil || page < 1{
+		if err1 != nil || page < 1 {
 			page = 1
 		}
 
@@ -38,25 +45,32 @@ func GetUsers() gin.HandlerFunc {
 		startIndex, err = strconv.Atoi(c.Query("startIndex"))
 
 		matchStage := bson.D{{"$match", bson.D{{}}}}
+
 		groupStage := bson.D{{"$group", bson.D{{"_id", bson.D{{"_id", "null"}}}, {"total_count", bson.D{{"$sum", 1}}}, {"data", bson.D{{"$push", "$$ROOT"}}}}}}
+
 		projectStage := bson.D{
 			{"$project", bson.D{
 				{"_id", 0},
 				{"total_count", 1},
-				{"user_items", bson.D{{"$slice", []interface{}{"$data", startIndex, recordPerPage}}}},
-			
-		}}}
+				{"users", bson.D{{"$slice", []interface{}{"$data", startIndex, recordPerPage}}}},
+			}}}
+		unStage := bson.D{{"$unset", "password"}}
 
-		result, err := userCollection.Aggregate(ctx, mongo.Pipeline{matchStage, groupStage, projectStage})
+
+		result, err := userCollection.Aggregate(ctx, mongo.Pipeline{matchStage, unStage, groupStage, projectStage})
 		defer cancel()
-		if err != nil{
-			helpers.InternalError(c, "test")
+		if err != nil {
+			c.JSON(500, gin.H{"status": "Failure",
+				"message": "An error Occurred while listing user items"})
+
 		}
 		var allUsers []bson.M
-		if err = result.All(ctx, &allUsers); err != nil{
+		if err = result.All(ctx, &allUsers); err != nil {
 			log.Fatal(err)
 		}
-		helpers.SuccessResponse(c, allUsers)
+
+		c.JSON(200, gin.H{"status": "Success", "data": allUsers[0]})
+
 	}
 }
 
@@ -205,8 +219,33 @@ func VerifyPassword(userPassword string, providedPassword string) (string, bool)
 	msg := ""
 
 	if err != nil {
-		msg = fmt.Sprintf("login or password is incorrect")
+		msg = "login or password is incorrect"
 		check = false
 	}
 	return msg, check
+}
+
+func DeleteUser() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+		userId := c.Param("user_id")
+		defer cancel()
+
+		filter := bson.M{"user_id": userId}
+		result, err := userCollection.DeleteOne(ctx, filter)
+		res := map[string]interface{}{"data": result}
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": err})
+			return
+		}
+
+		if result.DeletedCount < 1 {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "No data to delete"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"message": "Table deleted successfully", "Data": res})
+	}
 }
