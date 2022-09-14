@@ -89,7 +89,6 @@ func GetUserAccountDetails() gin.HandlerFunc {
 }
 
 func GetUserCardDetails() gin.HandlerFunc {
-
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		card_id := c.Param("card_id")

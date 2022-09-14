@@ -123,6 +123,7 @@ func SignUp() gin.HandlerFunc {
 		users.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 		users.ID = primitive.NewObjectID()
 		users.User_id = users.ID.Hex()
+
 		//generate token and refresh token (generate all tokens function from helper)
 		token, refreshToken, _ := helpers.GenerateAllTokens(*users.Email, *users.First_name, *users.Last_name, users.User_id)
 		users.Token = &token
@@ -162,14 +163,38 @@ func SignUp() gin.HandlerFunc {
 
 func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		// defer cancel()
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		var users models.User
+		var foundUsers models.User
 		//convert the login data from postman which is in JSON to golang readable format
+		if err := c.BindJSON(&users); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "An Error Occurred",
+			})
+			return
+		}
 		//find a user with that email and see if that user even exists
+		err := userCollection.FindOne(ctx, bson.M{"email": users.Email}).Decode(&foundUsers)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "User Already exists",
+			})
+			return
+		}
 		//then you will verify the password
+		msg, isPasswordValid := VerifyPassword(*users.Password, *foundUsers.Password)
+		if !isPasswordValid {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			return
+		}
 		//if all goes well, then you'll generate tokens
+		token, refreshToken, _ := helpers.GenerateAllTokens(*foundUsers.Email, *foundUsers.First_name, *foundUsers.Last_name, foundUsers.User_id)
+
 		//update tokens - token and refresh token
+		helpers.UpdateAllTokens(token, refreshToken, foundUsers.User_id)
 		//return statusOK
+		c.JSON(http.StatusOK, foundUsers)
 	}
 }
 
