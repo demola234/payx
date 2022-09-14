@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
-	// "go-service/payx/configs"
+	"go-service/payx/configs"
 	"log"
 	"time"
 
@@ -12,8 +12,8 @@ import (
 )
 
 func DBinstance() *mongo.Client {
-	var uri = "mongodb+srv://payx:vU5l1aNBxBKc6Vhb@cluster0.bu7aw34.mongodb.net/?retryWrites=true&w=majority"
-	client, err := mongo.NewClient(options.Client().ApplyURI(uri))
+
+	client, err := mongo.NewClient(options.Client().ApplyURI(configs.MongoDBEnvUrl()))
 	if err != nil {
 		log.Fatal(err.Error())
 	}
