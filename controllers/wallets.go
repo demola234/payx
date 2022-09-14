@@ -70,7 +70,7 @@ func CreateUsersCard(c *gin.Context) (models.Card, error) {
 	return card, nil
 }
 
-func GetUserAccountDetails() gin.HandlerFunc {
+func GetUserAccountDetailsByID() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
@@ -79,6 +79,25 @@ func GetUserAccountDetails() gin.HandlerFunc {
 		var foundAccount models.Account
 
 		err := accountCollection.FindOne(ctx, bson.M{"account_id": account_Id}).Decode(&foundAccount)
+
+		defer cancel()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while listing user items"})
+		}
+		c.JSON(http.StatusOK, foundAccount)
+	}
+}
+
+
+func GetUserAccountDetailsByNumber() gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		account_Number := c.Param("account_number")
+
+		var foundAccount models.Account
+
+		err := accountCollection.FindOne(ctx, bson.M{"account_number": account_Number}).Decode(&foundAccount)
 
 		defer cancel()
 		if err != nil {
