@@ -4,8 +4,6 @@ import (
 	"context"
 	"go-service/payx/database"
 
-	"github.com/gin-gonic/gin"
-	"time"
 	"go-service/payx/helpers"
 	"go-service/payx/models"
 
@@ -29,8 +27,6 @@ var userCollection *mongo.Collection = database.PayxCollection(database.Client, 
 func GetUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-
-		var users models.User
 		recordPerPage, err := strconv.Atoi(c.Query("recordPerPage"))
 		if err != nil || recordPerPage < 1 {
 			recordPerPage = 10
