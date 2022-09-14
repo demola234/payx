@@ -44,7 +44,7 @@ func GetUsers() gin.HandlerFunc {
 			{"$project", bson.D{
 				{"_id", 0},
 				{"total_count", 1},
-				{"user_items", bson.D{{"$slice", []interface{}{"$data", startIndex, recordPerPage}}}},
+				{"users", bson.D{{"$slice", []interface{}{"$data", startIndex, recordPerPage}}}},
 			}}}
 		unStage := bson.D{{"$unset", "password"}}
 
@@ -52,7 +52,7 @@ func GetUsers() gin.HandlerFunc {
 		defer cancel()
 		if err != nil {
 			c.JSON(500, gin.H{"status": "Failure",
-				"message": "An error occured while listing user items"})
+				"message": "An error Occurred while listing user items"})
 		}
 		var allUsers []bson.M
 		if err = result.All(ctx, &allUsers); err != nil {
