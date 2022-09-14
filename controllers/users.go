@@ -3,14 +3,19 @@ package controllers
 import (
 	"context"
 	"go-service/payx/database"
+
+	"github.com/gin-gonic/gin"
+	"time"
 	"go-service/payx/helpers"
 	"go-service/payx/models"
+
 	"log"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -24,6 +29,7 @@ var userCollection *mongo.Collection = database.PayxCollection(database.Client, 
 func GetUsers() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+
 		var users models.User
 		recordPerPage, err := strconv.Atoi(c.Query("recordPerPage"))
 		if err != nil || recordPerPage < 1 {
@@ -39,7 +45,9 @@ func GetUsers() gin.HandlerFunc {
 		startIndex, err = strconv.Atoi(c.Query("startIndex"))
 
 		matchStage := bson.D{{"$match", bson.D{{}}}}
-		groupStage := bson.D{{"$group", bson.D{{"_id", bson.D{{"_id", users.User_id}}}, {"total_count", bson.D{{"$sum", 1}}}, {"data", bson.D{{"$push", "$$ROOT"}}}}}}
+
+		groupStage := bson.D{{"$group", bson.D{{"_id", bson.D{{"_id", "null"}}}, {"total_count", bson.D{{"$sum", 1}}}, {"data", bson.D{{"$push", "$$ROOT"}}}}}}
+
 		projectStage := bson.D{
 			{"$project", bson.D{
 				{"_id", 0},
@@ -48,22 +56,38 @@ func GetUsers() gin.HandlerFunc {
 			}}}
 		unStage := bson.D{{"$unset", "password"}}
 
+
 		result, err := userCollection.Aggregate(ctx, mongo.Pipeline{matchStage, unStage, groupStage, projectStage})
 		defer cancel()
 		if err != nil {
 			c.JSON(500, gin.H{"status": "Failure",
 				"message": "An error Occurred while listing user items"})
+
 		}
 		var allUsers []bson.M
 		if err = result.All(ctx, &allUsers); err != nil {
 			log.Fatal(err)
 		}
+
 		c.JSON(200, gin.H{"status": "Success", "data": allUsers[0]})
+
 	}
 }
 
 func GetUser() gin.HandlerFunc {
-	return func(c *gin.Context) {}
+	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		userId := c.Param("user_id")
+		var user models.User
+
+		err := userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&user)
+		if err != nil{
+			c.JSON(500, gin.H{"error": "Could not get the user"})
+		}
+		
+		c.JSON(200, user)
+	}
 }
 
 func EditUser() gin.HandlerFunc {
