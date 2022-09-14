@@ -18,8 +18,13 @@ func GenerateRandomString(length int, condition int ) (string){
 	if(condition == 2){
 		letters = []rune("0123456789")
 		}
+<<<<<<< HEAD
 	if(condition == 2){
 		letters = []rune("0123456789")
+=======
+	if(condition == 3){
+		letters = []rune("abcdefghijklmnopqrstuvwxyz")
+>>>>>>> f475d850837453665936fdf77caeb7e2e97b1175
 		}
 		b := make([]rune, length)
 		for i := range b {
