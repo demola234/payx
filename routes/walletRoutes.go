@@ -14,4 +14,6 @@ func WalletRoutes(incomingRoutes *gin.Engine) {
 	incomingRoutes.GET("/users/:user_id", controllers.GetUser())
 	incomingRoutes.PATCH("/users/:user_id", controllers.UpdateUser())
 	incomingRoutes.DELETE("/users/:user_id", controllers.DeleteUser())
+	incomingRoutes.PATCH("/profile", controllers.UploadProfileImage())
 }
+
