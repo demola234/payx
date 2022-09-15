@@ -1,6 +1,7 @@
 package main
 
 import (
+	"go-service/payx/middleware"
 	routers "go-service/payx/routes"
 	"os"
 
@@ -15,9 +16,10 @@ func main() {
 
 	router := gin.New()
 	router.Use(gin.Logger())
-	// router.Use(middleware.Authentication())
 	routers.UserRoutes(router)
-	// my part 
+	router.Use(middleware.Authentication())
+	routers.WalletRoutes(router)
+	// my part
 	// get all users
 	// get one
 	// deposit
