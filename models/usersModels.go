@@ -23,6 +23,6 @@ type User struct {
 	Created_at     time.Time          `json:"created_at"`
 	Updated_at     time.Time          `json:"updated_at"`
 	User_id        string             `json:"user_id"`
-	Card_id        *string            `json:"card"`
-	Account_id     *string            `json:"account"`
+	Card_id        *string            `json:"card_id"`
+	Account_id     *string            `json:"account_id"`
 }

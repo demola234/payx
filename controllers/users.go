@@ -3,9 +3,8 @@ package controllers
 import (
 	"context"
 	"go-service/payx/database"
+	"strings"
 
-	"github.com/gin-gonic/gin"
-	"time"
 	"go-service/payx/helpers"
 	"go-service/payx/models"
 
@@ -13,10 +12,16 @@ import (
 	"net/http"
 	"strconv"
 
+	"time"
+
+	"github.com/cloudinary/cloudinary-go"
+	"github.com/cloudinary/cloudinary-go/api/uploader"
+	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -52,7 +57,6 @@ func GetUsers() gin.HandlerFunc {
 			}}}
 		unStage := bson.D{{"$unset", "password"}}
 
-
 		result, err := userCollection.Aggregate(ctx, mongo.Pipeline{matchStage, unStage, groupStage, projectStage})
 		defer cancel()
 		if err != nil {
@@ -78,17 +82,11 @@ func GetUser() gin.HandlerFunc {
 		var user models.User
 
 		err := userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&user)
-		if err != nil{
+		if err != nil {
 			c.JSON(500, gin.H{"error": "Could not get the user"})
 		}
-		
+
 		c.JSON(200, user)
-	}
-}
-
-func EditUser() gin.HandlerFunc {
-	return func(c *gin.Context) {
-
 	}
 }
 
@@ -143,6 +141,7 @@ func SignUp() gin.HandlerFunc {
 		users.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 		users.ID = primitive.NewObjectID()
 		users.User_id = users.ID.Hex()
+
 		//generate token and refresh token (generate all tokens function from helper)
 		token, refreshToken, _ := helpers.GenerateAllTokens(*users.Email, *users.First_name, *users.Last_name, users.User_id)
 		users.Token = &token
@@ -182,20 +181,158 @@ func SignUp() gin.HandlerFunc {
 
 func Login() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		// defer cancel()
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		var users models.User
+		var foundUsers models.User
 		//convert the login data from postman which is in JSON to golang readable format
+		if err := c.BindJSON(&users); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "An Error Occurred",
+			})
+			return
+		}
 		//find a user with that email and see if that user even exists
+		err := userCollection.FindOne(ctx, bson.M{"email": users.Email}).Decode(&foundUsers)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "User Already exists",
+			})
+			return
+		}
 		//then you will verify the password
+		msg, isPasswordValid := VerifyPassword(*users.Password, *foundUsers.Password)
+		if !isPasswordValid {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+			return
+		}
 		//if all goes well, then you'll generate tokens
+		token, refreshToken, _ := helpers.GenerateAllTokens(*foundUsers.Email, *foundUsers.First_name, *foundUsers.Last_name, foundUsers.User_id)
+
 		//update tokens - token and refresh token
+		helpers.UpdateAllTokens(token, refreshToken, foundUsers.User_id)
 		//return statusOK
+		c.JSON(http.StatusOK, foundUsers)
 	}
 }
 
 func UploadProfileImage() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		var user models.User
+		// Create our instance
+		cld, _ := cloudinary.NewFromURL("cloudinary://211576879732455:W6p_HMMIrDZkEfheHRUHIkSTdOo@dcnuiaskr")
+		// Get the preferred name of the file if its not supplied
+		fileName := "profileImage"
 
+		image, _, err := c.Request.FormFile("image")
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   err,
+				"message": "Failed to upload",
+			})
+		}
+
+		result, err := cld.Upload.Upload(c, image, uploader.UploadParams{
+			PublicID: fileName,
+			// Split the tags by comma
+			Tags: strings.Split(",", "profile"),
+		})
+
+		if err != nil {
+			c.String(http.StatusConflict, "Upload to cloudinary failed")
+		}
+
+		userId := c.PostForm("user_id")
+		filter := bson.M{"user_id": userId}
+
+		var updateObj primitive.D
+
+		user.Image = &result.URL
+
+		if *user.Image != "" {
+			updateObj = append(updateObj, bson.E{"image", user.Image})
+		}
+
+		user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		updateObj = append(updateObj, bson.E{"updated_at", user.Updated_at})
+
+		upsert := true
+		opt := options.UpdateOptions{
+			Upsert: &upsert,
+		}
+
+		_, err = userCollection.UpdateOne(
+			ctx,
+			filter,
+			bson.D{{"$set", updateObj}},
+			&opt,
+		)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to Update"})
+
+		}
+
+		// c.JSON(http.StatusOK, gin.H{"message": "User Updated Successfully!"})
+
+		c.JSON(http.StatusCreated, gin.H{
+			"message":   "Successfully uploaded the file",
+			"secureURL": result.SecureURL,
+			"publicURL": result.URL,
+			"image":     user.Image,
+		})
+	}
+
+}
+
+func UpdateUser() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		var user models.User
+
+		if err := c.BindJSON(&user); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		userId := c.Param("user_id")
+		filter := bson.M{"user_id": userId}
+
+		var updateObj primitive.D
+
+		if user.First_name != nil {
+			updateObj = append(updateObj, bson.E{"first_name", user.First_name})
+		}
+
+		if user.Last_name != nil {
+			updateObj = append(updateObj, bson.E{"last_name", user.Last_name})
+		}
+
+		if user.Phone != nil {
+			updateObj = append(updateObj, bson.E{"phone", user.Phone})
+		}
+
+		user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		updateObj = append(updateObj, bson.E{"updated_at", user.Updated_at})
+
+		upsert := true
+		opt := options.UpdateOptions{
+			Upsert: &upsert,
+		}
+		_, err := userCollection.UpdateOne(
+			ctx,
+			filter,
+			bson.D{{"$set", updateObj}},
+			&opt,
+		)
+		if err != nil {
+			// msg := "User Failed"
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "User Updated Successfully!"})
 	}
 }
 
@@ -244,4 +381,47 @@ func DeleteUser() gin.HandlerFunc {
 
 		c.JSON(http.StatusCreated, gin.H{"message": "Table deleted successfully", "Data": res})
 	}
+}
+
+func UpdateProfile(c *gin.Context, result string) {
+	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
+	var user models.User
+
+	if err := c.BindJSON(&user); err != nil {
+		// c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userId := c.Param("user_id")
+	filter := bson.M{"user_id": userId}
+
+	var updateObj primitive.D
+
+	user.Image = &result
+
+	if *user.Image != "" {
+		updateObj = append(updateObj, bson.E{"image", user.Image})
+	}
+
+	user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+	updateObj = append(updateObj, bson.E{"updated_at", user.Updated_at})
+
+	upsert := true
+	opt := options.UpdateOptions{
+		Upsert: &upsert,
+	}
+	_, err := userCollection.UpdateOne(
+		ctx,
+		filter,
+		bson.D{{"$set", updateObj}},
+		&opt,
+	)
+	if err != nil {
+		// msg := "User Failed"
+
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User Updated Successfully!"})
+
 }
