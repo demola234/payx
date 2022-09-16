@@ -19,9 +19,6 @@ func main() {
 	routers.UserRoutes(router)
 	router.Use(middleware.Authentication())
 	routers.WalletRoutes(router)
-	// my part
-	// get all users
-	// get one
-	// deposit
+	routers.TransactionRoutes(router)
 	router.Run(":" + port)
 }
