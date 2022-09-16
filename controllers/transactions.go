@@ -12,17 +12,6 @@ import(
 	"log"
 )
 
-type DepositResponse struct{
-	Status bool 	`json:"status"`
-	Message	string	`json:"message"`
-	Data	DepositResponseData
-}
-
-type DepositResponseData struct{
-	AuthorizationUrl string 		`json:"authorization_url"`
-	AccessCode	string	`json:"access_code"`
-	Reference	string	`json:"reference"`
-}
 
 func Deposit() gin.HandlerFunc{
 
