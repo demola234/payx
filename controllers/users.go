@@ -143,7 +143,7 @@ func SignUp() gin.HandlerFunc {
 		users.User_id = users.ID.Hex()
 
 		//generate token and refresh token (generate all tokens function from helper)
-		token, refreshToken, _ := helpers.GenerateAllTokens(*users.Email, *users.First_name, *users.Last_name, users.User_id, *users.Account_Number)
+		token, refreshToken, _ := helpers.GenerateAllTokens(*users.Email, *users.First_name, *users.Last_name, users.User_id)
 		users.Token = &token
 		users.Refresh_Token = &refreshToken
 
@@ -207,7 +207,7 @@ func Login() gin.HandlerFunc {
 			return
 		}
 		//if all goes well, then you'll generate tokens
-		token, refreshToken, _ := helpers.GenerateAllTokens(*foundUsers.Email, *foundUsers.First_name, *foundUsers.Last_name, foundUsers.User_id, *foundUsers.Account_Number)
+		token, refreshToken, _ := helpers.GenerateAllTokens(*foundUsers.Email, *foundUsers.First_name, *foundUsers.Last_name, foundUsers.User_id)
 
 		//update tokens - token and refresh token
 		helpers.UpdateAllTokens(token, refreshToken, foundUsers.User_id)
@@ -389,7 +389,6 @@ func UpdateProfile(c *gin.Context, result string) {
 	var user models.User
 
 	if err := c.BindJSON(&user); err != nil {
-		// c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 

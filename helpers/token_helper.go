@@ -28,14 +28,13 @@ var SECRET_KEY string = os.Getenv("SECRET_KEY")
 
 var userCollection *mongo.Collection = database.PayxCollection(database.Client, "Users")
 
-func GenerateAllTokens(email string, firstName string, lastName string, uid string, account_number string) (signedToken string, signedRefreshToken string, err error) {
+func GenerateAllTokens(email string, firstName string, lastName string, uid string) (signedToken string, signedRefreshToken string, err error) {
 
 	claims := &SignedDetails{
 		Email:      email,
 		First_name: firstName,
 		Last_name:  lastName,
 		Uid:        uid,
-		Account_number:  account_number,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Local().Add(time.Hour * time.Duration(24)).Unix(),
 		},

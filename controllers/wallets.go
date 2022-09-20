@@ -2,9 +2,14 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"go-service/payx/database"
+	"go-service/payx/interfaces"
 	"go-service/payx/models"
 	"go-service/payx/utils"
+	"io/ioutil"
+	"log"
 
 	"net/http"
 
@@ -88,7 +93,6 @@ func GetUserAccountDetailsByID() gin.HandlerFunc {
 	}
 }
 
-
 func GetUserAccountDetailsByNumber() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
@@ -121,5 +125,88 @@ func GetUserCardDetails() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while listing user items"})
 		}
 		c.JSON(http.StatusOK, foundCard)
+	}
+}
+
+func GetOtherBankAcctNo() gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+
+		accountNumber := c.PostForm("accountNumber")
+		bankCode := c.PostForm("bankCode")
+		var payStackData interfaces.Bank
+		var url = fmt.Sprintf("https://api.paystack.co/bank/resolve?account_number=%s&bank_code=%s", accountNumber, bankCode)
+		client := http.Client{}
+
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer sk_test_530cc30f2989b68e407c5f8997ee137e23ab40ef")
+
+		res, err := client.Do(req)
+		if err != nil {
+
+			log.Fatalln(err)
+		}
+
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+
+			log.Fatalln(err)
+		}
+
+		json.Unmarshal(body, &payStackData)
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+
+		c.JSON(http.StatusOK, gin.H{"data": payStackData.Data.AccountName})
+
+	}
+}
+
+
+
+func GetBankList() gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+		var payStackData interfaces.BankList
+		var url = "https://api.paystack.co/bank"
+		client := http.Client{}
+
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			log.Fatal(err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer sk_test_530cc30f2989b68e407c5f8997ee137e23ab40ef")
+
+		res, err := client.Do(req)
+		if err != nil {
+
+			log.Fatalln(err)
+		}
+
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+
+			log.Fatalln(err)
+		}
+
+		json.Unmarshal(body, &payStackData)
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		defer resp.Body.Close()
+
+		c.JSON(http.StatusOK, gin.H{"data": payStackData.Data})
+
 	}
 }
