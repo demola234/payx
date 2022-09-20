@@ -99,6 +99,7 @@ func TransferFunds() gin.HandlerFunc {
 		var creditorAccount models.Account
 
 		var updateObj primitive.D
+		var updateObj1 primitive.D
 
 		err1 := accountCollection.FindOne(ctx, bson.M{"account_number": debitNumber}).Decode(&debitAccount)
 
@@ -146,11 +147,11 @@ func TransferFunds() gin.HandlerFunc {
 
 		creditor := creditorAccount.Account_Balance + am
 		if creditorAccount.Account_Balance != 0 {
-			updateObj = append(updateObj, bson.E{"account_balance", creditor})
+			updateObj1 = append(updateObj, bson.E{"account_balance", creditor})
 		}
 
 		creditorAccount.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-		updateObj = append(updateObj, bson.E{"updated_at", creditorAccount.Updated_at})
+		updateObj1 = append(updateObj, bson.E{"updated_at", creditorAccount.Updated_at})
 
 		opt = options.UpdateOptions{
 			Upsert: &upsert,
@@ -159,7 +160,7 @@ func TransferFunds() gin.HandlerFunc {
 		_, updateErr2 := accountCollection.UpdateOne(
 			ctx,
 			filter2,
-			bson.D{{"$set", updateObj}},
+			bson.D{{"$set", updateObj1}},
 			&opt,
 		)
 
@@ -178,7 +179,7 @@ func TransferFunds() gin.HandlerFunc {
 // Ademola
 func AirTime() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		
+
 	}
 }
 
