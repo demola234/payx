@@ -10,9 +10,7 @@ type Datum struct {
 	ID          int64    `json:"id"`           
 	Name        string   `json:"name"`         
 	Slug        string   `json:"slug"`         
-	Code        string   `json:"code"`         
-	PayWithBank bool     `json:"pay_with_bank"`
-	Active      bool     `json:"active"`              
+	Code        string   `json:"code"`                     
 	CreatedAt   string   `json:"createdAt"`    
 	UpdatedAt   string   `json:"updatedAt"`    
 }
