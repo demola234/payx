@@ -124,7 +124,7 @@ func Verify() gin.HandlerFunc{
 		// find the user's account balance
 		var foundUser models.User
 		_ = userCollection.FindOne(ctx, bson.M{"account_number": account_number}).Decode(&foundUser)
-		newBalance := *foundUser.Balance+uint(amount)
+		newBalance := *foundUser.Balance+uint64(amount)
 
 		updateUserBalance(account_number, newBalance)
 
@@ -134,7 +134,7 @@ func Verify() gin.HandlerFunc{
 	}
 }
 
-func updateUserBalance(accountNumber string, amount uint) (err1 string){
+func updateUserBalance(accountNumber string, amount uint64) (err1 string){
 
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
