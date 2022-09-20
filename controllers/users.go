@@ -142,11 +142,6 @@ func SignUp() gin.HandlerFunc {
 		users.ID = primitive.NewObjectID()
 		users.User_id = users.ID.Hex()
 
-		//generate token and refresh token (generate all tokens function from helper)
-		token, refreshToken, _ := helpers.GenerateAllTokens(*users.Email, *users.First_name, *users.Last_name, users.User_id, *users.Account_Number)
-		users.Token = &token
-		users.Refresh_Token = &refreshToken
-
 		//Create User Account
 		accountDetails, error := CreateAccountDetails(c)
 		if error != nil {
@@ -158,6 +153,11 @@ func SignUp() gin.HandlerFunc {
 		users.Account_id = &accountDetails.Account_Id
 		users.Balance = &accountDetails.Account_Balance
 
+		//generate token and refresh token (generate all tokens function from helper)
+		token, refreshToken, _ := helpers.GenerateAllTokens(*users.Email, *users.First_name, *users.Last_name, users.User_id, *users.Account_Number)
+		users.Token = &token
+		users.Refresh_Token = &refreshToken
+		
 		cardDetails, error := CreateUsersCard(c)
 		if error != nil {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{

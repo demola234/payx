@@ -167,7 +167,7 @@ func GetUserTransaction() gin.HandlerFunc{
 		account_number := c.MustGet("account_number").(string)
 		account, _ := strconv.Atoi(account_number)
 		fmt.Print(account)
-		matchStage := bson.D{{"$match", bson.D{{"sender_acct_number", account}, {"receiver_acct_number", account}}}}
+		matchStage := bson.D{{Key: "$match", Value: bson.D{primitive.E{Key: "sender_acct_number", Value: account}, primitive.E{Key:"receiver_acct_number", Value: account}}}}
 		// matchStage1 := bson.D{{"$match", bson.D{{"receiver_acct_number", account}}}}
 
 		groupStage := bson.D{{"$group", bson.D{{"_id", bson.D{{"_id", "null"}}}, {"total_count", bson.D{{"$sum", 1}}}, {"data", bson.D{{"$push", "$$ROOT"}}}}}}
