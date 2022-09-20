@@ -51,3 +51,12 @@ type VerificationResponseDataMetadata struct{
 	DebitorAccount	string		`json:"debitorAccount"`
 	CreditorAccount string	`json:"creditorAccount"`
 }
+
+type WithdrawFunds struct{
+	Amount string	`json:"amount"`
+}
+
+type UtilityBillBody struct{
+	Amount string	`json:"amount"`
+	Type	 string	`json:"type"`
+}
