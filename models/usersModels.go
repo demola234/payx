@@ -17,7 +17,7 @@ type User struct {
 	Address        *string            `json:"address"`
 	BVN            *string            `json:"bvn"`
 	Account_Number *string            `json:"account_number"`
-	Balance        *uint               `json:"balance"`
+	Balance        *uint64               `json:"balance"`
 	Token          *string            `json:"token"`
 	Refresh_Token  *string            `json:"refresh_token"`
 	Created_at     time.Time          `json:"created_at"`
