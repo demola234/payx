@@ -65,3 +65,18 @@ func Deposit() gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"data": depositResponse.Data.AuthorizationUrl})
 	}
 }
+
+// Ademola
+func GetDeposit() {}
+
+// Bolu
+func WithdrawFunds() {}
+
+// Ademola
+func TransferFunds() {}
+
+// Ademola
+func AirTime() {}
+
+// Bolu
+func UtilityBills() {}
