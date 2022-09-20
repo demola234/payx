@@ -53,7 +53,6 @@ func GenerateAllTokens(email string, firstName string, lastName string, uid stri
 	}
 
 	return token, refreshToken, err
-
 }
 
 func UpdateAllTokens(signedToken string, signedRefreshToken string, userId string) {
