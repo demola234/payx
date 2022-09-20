@@ -142,11 +142,6 @@ func SignUp() gin.HandlerFunc {
 		users.ID = primitive.NewObjectID()
 		users.User_id = users.ID.Hex()
 
-		//generate token and refresh token (generate all tokens function from helper)
-		token, refreshToken, _ := helpers.GenerateAllTokens(*users.Email, *users.First_name, *users.Last_name, users.User_id)
-		users.Token = &token
-		users.Refresh_Token = &refreshToken
-
 		//Create User Account
 		accountDetails, error := CreateAccountDetails(c)
 		if error != nil {
@@ -157,6 +152,11 @@ func SignUp() gin.HandlerFunc {
 		users.Account_Number = &accountDetails.Account_Number
 		users.Account_id = &accountDetails.Account_Id
 		users.Balance = &accountDetails.Account_Balance
+
+		//generate token and refresh token (generate all tokens function from helper)
+		token, refreshToken, _ := helpers.GenerateAllTokens(*users.Email, *users.First_name, *users.Last_name, users.User_id, *users.Account_Number)
+		users.Token = &token
+		users.Refresh_Token = &refreshToken
 
 		cardDetails, error := CreateUsersCard(c)
 		if error != nil {
@@ -207,7 +207,7 @@ func Login() gin.HandlerFunc {
 			return
 		}
 		//if all goes well, then you'll generate tokens
-		token, refreshToken, _ := helpers.GenerateAllTokens(*foundUsers.Email, *foundUsers.First_name, *foundUsers.Last_name, foundUsers.User_id)
+		token, refreshToken, _ := helpers.GenerateAllTokens(*foundUsers.Email, *foundUsers.First_name, *foundUsers.Last_name, foundUsers.User_id, *foundUsers.Account_Number)
 
 		//update tokens - token and refresh token
 		helpers.UpdateAllTokens(token, refreshToken, foundUsers.User_id)

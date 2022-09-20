@@ -210,3 +210,5 @@ func GetBankList() gin.HandlerFunc {
 
 	}
 }
+
+
