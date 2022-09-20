@@ -1,17 +1,12 @@
 package routes
 
 import (
-	"go-service/payx/controllers"
-
+	controller "go-service/payx/controllers"
 	"github.com/gin-gonic/gin"
 )
 
-func TransactionRoutes(incomingRoutes *gin.Engine) {
-	incomingRoutes.GET("/transaction/deposit", controllers.Deposit())
-	incomingRoutes.GET("/transaction/transfer", controllers.TransferFunds())
+func TransactionRoutes(incomingRoutes *gin.Engine){
+	incomingRoutes.POST("/transaction/deposit", controller.Deposit())
+	incomingRoutes.GET("/transaction/verify/:ref", controller.Verify())
+	incomingRoutes.GET("/transaction/user", controller.GetUserTransaction())
 }
-
-// func WalletRoutes(incomingRoutes *gin.Engine){
-// 	incomingRoutes.Get("/transaction/user", controllers.GetUsersTransactions())
-
-// }
