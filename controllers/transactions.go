@@ -1,5 +1,6 @@
 package controllers
 
+
 import(
 	"time"
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,7 @@ import(
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"context"
 	"net/http"
+
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -248,16 +250,113 @@ func GetUserTransaction() gin.HandlerFunc{
 }
 
 // Ademola
-func GetDeposit() {}
+func GetDeposit() gin.HandlerFunc {
+	return func(c *gin.Context) {}
+}
 
 // Bolu
 func WithdrawFunds() {}
 
 // Ademola
-func TransferFunds() {}
+func TransferFunds() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		debitNumber := c.PostForm("debit_number")
+		creditorNumber := c.PostForm("credit_number")
+		amount := c.PostForm("amount")
+		// message := c.PostForm("message")
+
+		am, err := strconv.ParseUint(amount, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error converting amount to unit"})
+		}
+
+		var debitAccount models.Account
+		var creditorAccount models.Account
+
+		var updateObj primitive.D
+
+		err1 := accountCollection.FindOne(ctx, bson.M{"account_number": debitNumber}).Decode(&debitAccount)
+
+		defer cancel()
+		if err1 != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while listing user items"})
+		}
+
+		err2 := accountCollection.FindOne(ctx, bson.M{"account_number": creditorNumber}).Decode(&creditorAccount)
+		if err2 != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while listing user items"})
+		}
+
+		if debitAccount.Account_Balance >= am {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Insufficient Funds"})
+		}
+		filter1 := bson.M{"account_number": debitNumber}
+
+		debit := debitAccount.Account_Balance - am
+		if creditorAccount.Account_Balance != 0 {
+			updateObj = append(updateObj, bson.E{"account_balance", debit})
+		}
+
+		debitAccount.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		updateObj = append(updateObj, bson.E{"updated_at", debitAccount.Updated_at})
+
+		upsert := true
+		opt := options.UpdateOptions{
+			Upsert: &upsert,
+		}
+
+		_, updateErr1 := accountCollection.UpdateOne(
+			ctx,
+			filter1,
+			bson.D{{"$set", updateObj}},
+			&opt,
+		)
+
+		if updateErr1 != nil {
+			// msg := "User Failed"
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+
+		filter2 := bson.M{"account_number": creditorNumber}
+
+		creditor := creditorAccount.Account_Balance + am
+		if creditorAccount.Account_Balance != 0 {
+			updateObj = append(updateObj, bson.E{"account_balance", creditor})
+		}
+
+		creditorAccount.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		updateObj = append(updateObj, bson.E{"updated_at", creditorAccount.Updated_at})
+
+		opt = options.UpdateOptions{
+			Upsert: &upsert,
+		}
+
+		_, updateErr2 := accountCollection.UpdateOne(
+			ctx,
+			filter2,
+			bson.D{{"$set", updateObj}},
+			&opt,
+		)
+
+		if updateErr2 != nil {
+			// msg := "User Failed"
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+
+		//Add to Transaction History
+
+		c.JSON(http.StatusOK, gin.H{"data": "successfully transferred!!!"})
+
+	}
+}
 
 // Ademola
-func AirTime() {}
+func AirTime() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		
+	}
+}
 
 // Bolu
 func UtilityBills() {}
