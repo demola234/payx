@@ -121,15 +121,17 @@ func Verify() gin.HandlerFunc {
 		account_number := depositResponse.Data.Metadata.CreditorAccount
 
 		// find the user's account balance
-		var foundUser models.User
-		_ = userCollection.FindOne(ctx, bson.M{"account_number": account_number}).Decode(&foundUser)
-		newBalance := *foundUser.Balance + uint64(amount)
+
+		var foundAccount models.Account
+		_ = accountCollection.FindOne(ctx, bson.M{"account_number": account_number}).Decode(&foundAccount)
+		newBalance := foundAccount.Account_Balance+uint64(amount)
+
 
 		updateUserBalance(account_number, newBalance)
 
 		defer cancel()
 
-		c.JSON(http.StatusOK, gin.H{"data": "Success"})
+		c.JSON(http.StatusOK, gin.H{"data": "deposit was successful"})
 	}
 }
 
@@ -139,31 +141,32 @@ func updateUserBalance(accountNumber string, amount uint64) (err1 string) {
 	defer cancel()
 	var user models.User
 
-	filter := bson.M{"account_number": &accountNumber}
+	filter := bson.M{"account_number": accountNumber}
 
 	var updateObj primitive.D
-
-	updateObj = append(updateObj, bson.E{"balance", &amount})
+	updateObj = append(updateObj, bson.E{"account_balance", amount})
 
 	user.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	updateObj = append(updateObj, bson.E{"updated_at", user.Updated_at})
 
 	upsert := true
-	opt := options.UpdateOptions{
-		Upsert: &upsert,
-	}
-	_, err := userCollection.UpdateOne(
-		ctx,
-		filter,
-		bson.D{{"$set", updateObj}},
-		&opt,
-	)
 
-	if err != nil {
-		fmt.Println(err.Error())
-		err1 = err.Error()
-	}
-	return err1
+		opt := options.UpdateOptions{
+			Upsert: &upsert,
+		}
+		_, err := accountCollection.UpdateOne(
+			ctx,
+			filter,
+			bson.D{{"$set", updateObj}},
+			&opt,
+		)
+
+		if err != nil {
+			fmt.Println(err.Error())
+			err1 = err.Error()
+		}
+		return err1
+
 
 }
 
@@ -264,8 +267,46 @@ func GetUserTransactionByID() gin.HandlerFunc {
 	}
 }
 
-// Bolu
-func WithdrawFunds() {}
+
+func WithdrawFunds() gin.HandlerFunc{
+	return func(c *gin.Context){
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		var body interfaces.WithdrawFunds
+		err := c.BindJSON(&body)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+		}
+
+		validationErr := validate.Struct(body)
+		if validationErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+		}
+
+		var foundAccount models.Account
+
+		account_number := c.MustGet("account_number").(string)
+		am, err := strconv.ParseUint(body.Amount, 10, 32)
+		_ = accountCollection.FindOne(ctx, bson.M{"account_number": account_number}).Decode(&foundAccount)
+		if(foundAccount.Account_Balance<am){
+			c.JSON(400, gin.H{"error":"You dont have enough funds"})
+		}
+
+		// create payload to creat transaction
+		var payload = interfaces.VerificationResponseDataMetadata{body.Amount, "", account_number, "0"}
+		verificationErr := saveTransaction(payload, "0")
+		if verificationErr != nil{
+			c.JSON(500, gin.H{"data":"Error occured while saving the transaction"})
+		}
+
+		newBalance := foundAccount.Account_Balance-am
+		updateUserBalance(account_number, newBalance)
+		c.JSON(http.StatusOK, gin.H{"data": "funds were withdrawn successfully"})
+	}
+}
 
 // Ademola
 func TransferFunds() gin.HandlerFunc {
@@ -386,5 +427,44 @@ func AirTime() gin.HandlerFunc {
 	}
 }
 
-// Bolu
-func UtilityBills() {}
+
+func UtilityBills() gin.HandlerFunc{
+
+	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+		var body interfaces.UtilityBillBody
+		err := c.BindJSON(&body)
+
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+		}
+
+		validationErr := validate.Struct(body)
+		if validationErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
+		}
+
+		var foundAccount models.Account
+
+		account_number := c.MustGet("account_number").(string)
+		am, err := strconv.ParseUint(body.Amount, 10, 32)
+		_ = accountCollection.FindOne(ctx, bson.M{"account_number": account_number}).Decode(&foundAccount)
+		if(foundAccount.Account_Balance<am){
+			c.JSON(400, gin.H{"error":"You dont have enough funds"})
+		}
+
+		// create payload to creat transaction
+		var payload = interfaces.VerificationResponseDataMetadata{body.Amount, "", account_number, body.Type}
+		verificationErr := saveTransaction(payload, "0")
+		if verificationErr != nil{
+			c.JSON(500, gin.H{"data":"Error occured while saving the transaction"})
+		}
+
+		newBalance := foundAccount.Account_Balance-am
+		updateUserBalance(account_number, newBalance)
+		c.JSON(http.StatusOK, gin.H{"data": "payment successful"})
+	}
+}
