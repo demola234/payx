@@ -1,18 +1,18 @@
 package controllers
 
-
-import(
+import (
+	"context"
+	"go-service/payx/database"
+	"go-service/payx/interfaces"
+	"go-service/payx/models"
+	"net/http"
 	"time"
+
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go-service/payx/interfaces"
-	"go-service/payx/database"
-	"go-service/payx/models"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"context"
-	"net/http"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"bytes"
 	"encoding/json"
@@ -22,7 +22,6 @@ import(
 )
 
 var transactionCollection *mongo.Collection = database.PayxCollection(database.Client, "Transaction")
-
 
 func Deposit() gin.HandlerFunc {
 
@@ -76,9 +75,9 @@ func Deposit() gin.HandlerFunc {
 	}
 }
 
-func Verify() gin.HandlerFunc{
+func Verify() gin.HandlerFunc {
 
-	return func(c *gin.Context){
+	return func(c *gin.Context) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
@@ -88,11 +87,11 @@ func Verify() gin.HandlerFunc{
 		if err != nil {
 			c.JSON(500, gin.H{"error": "Error processing the transaction"})
 		}
-		if count > 0{
+		if count > 0 {
 			c.JSON(403, gin.H{"error": "This transaction has already been processed"})
 		}
 
-		url := "https://api.paystack.co/transaction/verify/"+ref
+		url := "https://api.paystack.co/transaction/verify/" + ref
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			log.Fatal(err)
@@ -109,22 +108,24 @@ func Verify() gin.HandlerFunc{
 		depositResponse := new(interfaces.VerificationResponse)
 		json.NewDecoder(resp.Body).Decode(depositResponse)
 		// check if paystack verification was confirmed
-		if !depositResponse.Status{
-			c.JSON(403, gin.H{"data":"Invalid verification code"})
+		if !depositResponse.Status {
+			c.JSON(403, gin.H{"data": "Invalid verification code"})
 		}
 		verificationErr := saveTransaction(depositResponse.Data.Metadata, ref)
-		if verificationErr != nil{
-			c.JSON(500, gin.H{"data":"Error occured while saving the transaction"})
-			
+		if verificationErr != nil {
+			c.JSON(500, gin.H{"data": "Error occured while saving the transaction"})
+
 		}
 
 		amount, _ := strconv.Atoi(depositResponse.Data.Metadata.Amount)
 		account_number := depositResponse.Data.Metadata.CreditorAccount
 
 		// find the user's account balance
+
 		var foundAccount models.Account
 		_ = accountCollection.FindOne(ctx, bson.M{"account_number": account_number}).Decode(&foundAccount)
 		newBalance := foundAccount.Account_Balance+uint64(amount)
+
 
 		updateUserBalance(account_number, newBalance)
 
@@ -134,7 +135,7 @@ func Verify() gin.HandlerFunc{
 	}
 }
 
-func updateUserBalance(accountNumber string, amount uint64) (err1 string){
+func updateUserBalance(accountNumber string, amount uint64) (err1 string) {
 
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
@@ -149,6 +150,7 @@ func updateUserBalance(accountNumber string, amount uint64) (err1 string){
 	updateObj = append(updateObj, bson.E{"updated_at", user.Updated_at})
 
 	upsert := true
+
 		opt := options.UpdateOptions{
 			Upsert: &upsert,
 		}
@@ -165,9 +167,10 @@ func updateUserBalance(accountNumber string, amount uint64) (err1 string){
 		}
 		return err1
 
+
 }
 
-func saveTransaction(payload interfaces.VerificationResponseDataMetadata, reference string) (error){
+func saveTransaction(payload interfaces.VerificationResponseDataMetadata, reference string) error {
 
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
@@ -175,7 +178,7 @@ func saveTransaction(payload interfaces.VerificationResponseDataMetadata, refere
 	amount, _ := strconv.Atoi(payload.Amount)
 	creditor, _ := strconv.Atoi(payload.CreditorAccount)
 	debitor, _ := strconv.Atoi(payload.DebitorAccount)
-	
+
 	var transaction models.Transaction
 
 	transaction.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
@@ -186,18 +189,16 @@ func saveTransaction(payload interfaces.VerificationResponseDataMetadata, refere
 	transaction.Reference = reference
 	transaction.Message = payload.Message
 	transaction.Amount = amount
-	transaction.Sender_Acct_Number = creditor
-	transaction.Receiver_Acct_Number = debitor
+	transaction.Sender_Acct_Number = string(creditor)
+	transaction.Receiver_Acct_Number = string(debitor)
 	transaction.Transfer_Status = true
 	_, error := transactionCollection.InsertOne(ctx, transaction)
 	return error
 }
 
+func GetUserTransaction() gin.HandlerFunc {
 
-
-func GetUserTransaction() gin.HandlerFunc{
-
-	return func(c *gin.Context){
+	return func(c *gin.Context) {
 
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 
@@ -217,7 +218,7 @@ func GetUserTransaction() gin.HandlerFunc{
 		account_number := c.MustGet("account_number").(string)
 		account, _ := strconv.Atoi(account_number)
 		fmt.Print(account)
-		matchStage := bson.D{{Key: "$match", Value: bson.D{primitive.E{Key: "sender_acct_number", Value: account}, primitive.E{Key:"receiver_acct_number", Value: account}}}}
+		matchStage := bson.D{{Key: "$match", Value: bson.D{primitive.E{Key: "sender_acct_number", Value: account}, primitive.E{Key: "receiver_acct_number", Value: account}}}}
 		// matchStage1 := bson.D{{"$match", bson.D{{"receiver_acct_number", account}}}}
 
 		groupStage := bson.D{{"$group", bson.D{{"_id", bson.D{{"_id", "null"}}}, {"total_count", bson.D{{"$sum", 1}}}, {"data", bson.D{{"$push", "$$ROOT"}}}}}}
@@ -229,7 +230,7 @@ func GetUserTransaction() gin.HandlerFunc{
 				{"Transactions", bson.D{{"$slice", []interface{}{"$data", startIndex, recordPerPage}}}},
 			}}}
 
-			sortStage := bson.D{{"$sort", bson.D{{"_id", -1}}}}
+		sortStage := bson.D{{"$sort", bson.D{{"_id", -1}}}}
 
 		result, err := transactionCollection.Aggregate(ctx, mongo.Pipeline{matchStage, sortStage, groupStage, projectStage})
 		defer cancel()
@@ -238,19 +239,32 @@ func GetUserTransaction() gin.HandlerFunc{
 				"message": "An error Occurred while listing user transaction"})
 
 		}
-		var allUsers []bson.M
-		if err = result.All(ctx, &allUsers); err != nil {
+		var allTransactions []bson.M
+		if err = result.All(ctx, &allTransactions); err != nil {
 			log.Fatal(err)
 		}
 
-		c.JSON(200, gin.H{"status": "Success", "data": allUsers[0]})
+		c.JSON(200, gin.H{"status": "Success", "data": allTransactions[0]})
 
 	}
 }
 
 // Ademola
-func GetDeposit() gin.HandlerFunc {
-	return func(c *gin.Context) {}
+func GetUserTransactionByID() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		transaction_id := c.Param("transaction_id")
+
+		var transaction models.Transaction
+
+		err := accountCollection.FindOne(ctx, bson.M{"transaction_id": transaction_id}).Decode(&transaction)
+
+		defer cancel()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occurred while listing user items"})
+		}
+		c.JSON(http.StatusOK, transaction)
+	}
 }
 
 
@@ -301,7 +315,7 @@ func TransferFunds() gin.HandlerFunc {
 		debitNumber := c.PostForm("debit_number")
 		creditorNumber := c.PostForm("credit_number")
 		amount := c.PostForm("amount")
-		// message := c.PostForm("message")
+		message := c.PostForm("message")
 
 		am, err := strconv.ParseUint(amount, 10, 32)
 		if err != nil {
@@ -312,6 +326,7 @@ func TransferFunds() gin.HandlerFunc {
 		var creditorAccount models.Account
 
 		var updateObj primitive.D
+		var updateObj1 primitive.D
 
 		err1 := accountCollection.FindOne(ctx, bson.M{"account_number": debitNumber}).Decode(&debitAccount)
 
@@ -359,11 +374,11 @@ func TransferFunds() gin.HandlerFunc {
 
 		creditor := creditorAccount.Account_Balance + am
 		if creditorAccount.Account_Balance != 0 {
-			updateObj = append(updateObj, bson.E{"account_balance", creditor})
+			updateObj1 = append(updateObj, bson.E{"account_balance", creditor})
 		}
 
 		creditorAccount.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-		updateObj = append(updateObj, bson.E{"updated_at", creditorAccount.Updated_at})
+		updateObj1 = append(updateObj, bson.E{"updated_at", creditorAccount.Updated_at})
 
 		opt = options.UpdateOptions{
 			Upsert: &upsert,
@@ -372,7 +387,7 @@ func TransferFunds() gin.HandlerFunc {
 		_, updateErr2 := accountCollection.UpdateOne(
 			ctx,
 			filter2,
-			bson.D{{"$set", updateObj}},
+			bson.D{{"$set", updateObj1}},
 			&opt,
 		)
 
@@ -382,6 +397,23 @@ func TransferFunds() gin.HandlerFunc {
 		}
 
 		//Add to Transaction History
+		var transaction models.Transaction
+
+		transaction.Created_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		transaction.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+
+		transaction.ID = primitive.NewObjectID()
+		transaction.Transaction_id = transaction.ID.Hex()
+		transaction.Message = message
+		transaction.Amount = int(am)
+		transaction.Sender_Acct_Number = debitAccount.Account_Number
+		transaction.Receiver_Acct_Number = creditorAccount.Account_Number
+		transaction.Transfer_Status = true
+		_, transactionError := transactionCollection.InsertOne(ctx, transaction)
+
+		if transactionError != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 
 		c.JSON(http.StatusOK, gin.H{"data": "successfully transferred!!!"})
 
